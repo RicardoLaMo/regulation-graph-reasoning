@@ -9,6 +9,10 @@ on:
     types: [opened, assigned]
   pull_request_review:
     types: [submitted]
+  discussion:
+    types: [created]
+  discussion_comment:
+    types: [created]
 
 jobs:
   claude-code-action:
@@ -16,12 +20,15 @@ jobs:
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
-      (github.event_name == 'issues' && contains(github.event.issue.body, '@claude'))
+      (github.event_name == 'issues' && contains(github.event.issue.body, '@claude')) ||
+      (github.event_name == 'discussion' && contains(github.event.discussion.body, '@claude')) ||
+      (github.event_name == 'discussion_comment' && contains(github.event.comment.body, '@claude'))
     runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: write
       issues: write
+      discussions: write
       id-token: write
       actions: write
     steps:
