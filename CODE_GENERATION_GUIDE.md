@@ -246,9 +246,21 @@ python scripts/validate_spec_compliance.py
 gh pr merge [NUMBER]
 ```
 
-### Claude Commands in Issues/PRs
+### Claude Commands in Issues/PRs/Discussions
 - `@claude generate [component]` - Generate new code
 - `@claude validate [module]` - Validate against specs  
 - `@claude fix tests` - Fix failing tests
 - `@claude review` - Review existing code
 - `@claude document` - Generate documentation
+
+### Using Claude in Discussions
+Claude now responds to GitHub Discussions! Use discussions for:
+- General questions about the codebase
+- Architecture discussions
+- Planning and brainstorming
+- Non-code-generating conversations
+
+Example:
+```markdown
+@claude What's the best approach for implementing the knowledge graph layer?
+```
