@@ -1,0 +1,18 @@
+\begin{table}[htbp]
+\centering
+\small
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccccccc}
+\toprule
+intervention & ATE & CI\_low & CI\_high & placebo\_ATE & subset\_ATE & RCC\_delta & n \\
+\midrule
+E1: do(EvidenceGroundedness=high) -> specific\_route & 1.000 & 1.000 & 1.000 & -0.002 & 1.000 & 0.000 & 5000 \\
+E2: do(EvidenceGroundedness=high) -> confidence & 0.534 & 0.533 & 0.536 & -0.002 & 0.534 & 0.000 & 5000 \\
+E3: do(Conduct=deceptive\_practice) -> P(route=legal) & 0.290 & 0.277 & 0.302 & 0.002 & 0.286 & 0.000 & 10000 \\
+E4: do(Severity>=high) -> escalation\_flag & 1.000 & 1.000 & 1.000 & -0.009 & 1.000 & 0.000 & 4975 \\
+\bottomrule
+\end{tabular}
+}
+\caption{Backdoor-adjusted ATEs for E1--E4 with refutation tests.}
+\label{tab:causal}
+\end{table}

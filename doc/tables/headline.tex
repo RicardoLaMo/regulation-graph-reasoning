@@ -1,0 +1,16 @@
+\begin{table}[htbp]
+\centering
+\small
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccccccc}
+\toprule
+system & macro\_F1 & ECE & Brier & coverage & avg\_set\_size & abstention & cite\_faithfulness \\
+\midrule
+TF-IDF + LR (baseline) & 0.620 & 0.124 & 0.329 & -- & -- & -- & -- \\
+Proposed (rule+SBERT+conformal) & 0.620 & 0.057 & 0.313 & 0.991 & 2.886 & 0.697 & 0.061 \\
+\bottomrule
+\end{tabular}
+}
+\caption{Headline metrics on the 5k stratified test sample. The proposed pipeline halves the calibration error and exposes a 6.1\% citation-faithfulness rate as a headline negative result.}
+\label{tab:headline}
+\end{table}

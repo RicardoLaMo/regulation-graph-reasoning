@@ -1,0 +1,32 @@
+name: Build LaTeX Report
+
+on:
+  push:
+    branches: [main, "feat/**"]
+    paths:
+      - "doc/**"
+      - ".github/workflows/report-build.yml"
+  pull_request:
+    paths:
+      - "doc/**"
+  workflow_dispatch:
+
+jobs:
+  latex:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile report
+        uses: xu-cheng/latex-action@v3
+        with:
+          root_file: report.tex
+          working_directory: doc
+          latexmk_use_xelatex: false
+          extra_system_packages: ""
+          continue_on_error: false
+      - name: Upload report.pdf
+        uses: actions/upload-artifact@v4
+        with:
+          name: regulation-graph-reasoning-report
+          path: doc/report.pdf
+          if-no-files-found: error

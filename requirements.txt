@@ -1,37 +1,30 @@
-# Core dependencies for regulation-graph-reasoning
-# Generated based on specs/TECHNICAL_STACK.md
+# Pinned-loose deps for the regulation-graph-reasoning research stack.
+# Tested with conda env `causalrag` (python 3.12).
 
-# Core Python packages
-pandas>=2.0.0
-numpy>=1.24.0
-python-dotenv>=1.0.0
+# Core
+numpy>=1.24
+pandas>=2.0
+polars>=1.0
+pyarrow>=15
 
-# NLP and ML frameworks
-torch>=2.0.0
-transformers>=4.35.0
-spacy>=3.6.0
-scikit-learn>=1.3.0
+# Modeling
+scikit-learn>=1.3
+torch>=2.2
+torch-geometric>=2.5
+sentence-transformers>=2.7
 
-# Testing and Development
-pytest>=7.4.0
-pytest-cov>=4.1.0
-black>=23.0.0
-flake8>=6.0.0
-mypy>=1.5.0
+# Retrieval
+faiss-cpu>=1.7
+rank-bm25>=0.2
 
-# API and Web (for future use)
-fastapi>=0.104.0
-uvicorn>=0.24.0
-pydantic>=2.0.0
-
-# Data processing
-tqdm>=4.65.0
-requests>=2.31.0
-jsonschema>=4.17.0
-
-# Visualization (for development)
-matplotlib>=3.7.0
-seaborn>=0.12.0
-
-# Graph processing (for knowledge graphs)
+# Causal / graph
 networkx>=3.1
+umap-learn>=0.5
+
+# Visualization & utilities
+matplotlib>=3.7
+joblib>=1.3
+tqdm>=4.65
+
+# Test
+pytest>=7
