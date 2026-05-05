@@ -1,0 +1,14 @@
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{lcccccccc}
+\toprule
+system & macro\_F1 & ECE & Brier & coverage & avg\_set\_size & abstention & cite\_faithfulness \\
+\midrule
+TF-IDF + LR (baseline) & 0.620 & 0.124 & 0.329 & -- & -- & -- & -- \\
+Proposed (rule+SBERT+conformal+causal+grounding) & 0.620 & 0.051 & 0.312 & 0.990 & 2.896 & 0.034 & 0.061 \\
+\bottomrule
+\end{tabular}
+\caption{Headline metrics: baseline (TF-IDF+LR) vs proposed system on the 5k stratified test sample.}
+\label{tab:headline}
+\end{table}

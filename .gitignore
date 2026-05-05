@@ -1,0 +1,39 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+.venv/
+venv/
+
+# Generated artifacts
+artifacts/*
+!artifacts/.gitkeep
+
+# Symlinked / large data
+data/recent3y
+data/compliance
+data/compliance_indexes
+
+# LaTeX intermediates
+doc/*.aux
+doc/*.log
+doc/*.out
+doc/*.toc
+doc/*.bbl
+doc/*.blg
+doc/*.fdb_latexmk
+doc/*.fls
+doc/*.synctex.gz
+doc/*.lof
+doc/*.lot
+doc/*.run.xml
+doc/*.bcf
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+*.swp
+.omc/
