@@ -98,9 +98,13 @@ def main():
         "abstention": [float("nan"), conf_meta["abstention_rate"]],
         "cite_faithfulness": [float("nan"), cite_clean],
     })
+    # Shorten the proposed-system label so the headline table fits the text width.
+    headline.loc[headline["system"].str.startswith("Proposed"), "system"] = (
+        "Proposed (rule+SBERT+conformal)"
+    )
     write_table(headline, TABLES / "headline.tex",
-                caption="Headline metrics: baseline (TF-IDF+LR) vs proposed system on the 5k stratified test sample.",
-                label="tab:headline")
+                caption="Headline metrics on the 5k stratified test sample. The proposed pipeline halves the calibration error and exposes a 6.1\\% citation-faithfulness rate as a headline negative result.",
+                label="tab:headline", wide=True)
 
     # Causal table
     causal = json.loads((ARTIFACTS / "causal_results.json").read_text())
@@ -118,7 +122,7 @@ def main():
         })
     write_table(pd.DataFrame(rows), TABLES / "causal.tex",
                 caption="Backdoor-adjusted ATEs for E1--E4 with refutation tests.",
-                label="tab:causal")
+                label="tab:causal", wide=True)
 
     # Stress table
     stress = json.loads((ARTIFACTS / "stress_results.json").read_text())
@@ -142,7 +146,7 @@ def main():
     mfd = json.loads((ARTIFACTS / "manifold_meta.json").read_text())
     write_table(pd.DataFrame([mfd]), TABLES / "manifold.tex",
                 caption="Hypergraph manifold composition and clustering quality.",
-                label="tab:mfd")
+                label="tab:mfd", wide=True)
 
     # Assumption block
     (TABLES / "dag_assumptions.tex").write_text(

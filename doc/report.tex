@@ -1,5 +1,8 @@
 \documentclass[11pt]{article}
 \usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{amsmath, amssymb}
@@ -13,9 +16,8 @@
 \usepackage{enumitem}
 \hypersetup{colorlinks=true, linkcolor=blue!50!black, citecolor=blue!50!black, urlcolor=blue!50!black}
 
-\title{\textbf{Regulation-Graph Reasoning over CFPB Consumer Complaints:\\
-Structured Extraction, Causal Diagnostics, Conformal Calibration,\\
-and Hypergraph Manifold Grounding}}
+\title{\textbf{Regulation-Graph Reasoning over CFPB Consumer Complaints}\\[2pt]
+\large Structured Extraction, Causal Diagnostics, Conformal Calibration, and Hypergraph Manifold Grounding}
 \author{Richard Liu \\ \small \texttt{the.richard.liu@gmail.com}}
 \date{}
 
@@ -23,35 +25,46 @@ and Hypergraph Manifold Grounding}}
 \maketitle
 
 \begin{abstract}
-We present \emph{regulation-graph-reasoning}, an end-to-end research pipeline
-that triages U.S.\ Consumer Financial Protection Bureau (CFPB) consumer
-complaints with four interlocking properties: (i) deterministic
-\textbf{structured extraction} into a typed \texttt{AnswerObject}; (ii) a
-stated \textbf{structural causal model} (DAG) over
-$(\textsc{Product}, \textsc{Issue}, \textsc{Conduct}, \textsc{Harm}, \textsc{Severity},
-\textsc{EvidenceGroundedness}, \textsc{Route}, \textsc{ModelConfidence})$
-with backdoor-adjusted do-interventions and refutation tests; (iii)
-\textbf{Mondrian split-conformal prediction sets} (Adaptive Prediction Sets, APS)
-at $\alpha=0.1$ with a learned reject option; and (iv) \textbf{grounded
-explanations} that cite both complaint substrings and CFPB regulation
-sections (12 CFR Reg E/Z/X/B, FCRA, FDCPA, UDAAP guidance) via a hybrid
-BM25+FAISS searcher. Complaints and 51 regulation sections are jointly
-embedded in a manifold induced by a \textbf{hypergraph attention network} whose
-hyperedges are $(\textsc{Conduct}, \textsc{Route})$ pairs. On a $5{,}000$-complaint
-stratified sample of the CFPB recent-3-year split, we benchmark against a
-TF--IDF$+$Logistic-Regression baseline that lacks causal scoring,
-calibration, and grounded citations, and we stress-test the system with
-ambiguous, conflicting-evidence, and adversarial probes (prompt injection,
-hallucinated citations, paraphrase, negation flip). \textbf{We frame the work
-as a diagnostic harness, not a production routing system.} Concretely, the
-expected-calibration error drops from $0.124$ to $0.051$ and Mondrian APS
-empirical coverage is $0.991$ (overcovered against the $0.90$ target);
-applying the documented two-pronged abstention rule (\(|S|\!\geq\!3\) or
-\(\hat p_{(1)}\!<\!\theta\)) the system abstains on $69.7\%$ of complaints
-and is $89.6\%$ accurate on the routed remainder. \emph{Citation faithfulness
-is only $6.1\%$ on clean inputs and $16.9\%$ on the adversarial subset}, a
-strong negative result that we expose explicitly rather than smooth over.
-We release all code, scripts, and figures under MIT.
+\noindent\textbf{The problem.} The U.S.\ Consumer Financial Protection
+Bureau (CFPB) receives more than half a million consumer complaints each
+year about wrongful charges, abusive debt collection, mortgage errors, and
+damaged credit reports. Each complaint must reach the right team within
+60 days; a misrouted complaint can cost a vulnerable family a refund, a
+legal deadline, or a home. Today's automated routing systems pick a single
+category and forward the complaint with no honest signal of doubt, and
+they do not point back to the specific consumer-protection rule that the
+complaint actually invokes.
+
+\smallskip
+\noindent\textbf{What we built.} We release an open research pipeline that
+does three things differently. (1) It reads each complaint and looks up
+the most relevant rules from a curated set of $51$ federal
+consumer-finance regulation sections (covering electronic-funds disputes,
+credit cards, mortgages, fair lending, debt collection, and credit
+reports). (2) It routes the complaint to a downstream desk only when it is
+confident; otherwise it explicitly \emph{abstains} and hands the case to a
+human reviewer. (3) Every routing decision is paired with a citation back
+to a specific regulation passage so an auditor can check the reasoning.
+
+\smallskip
+\noindent\textbf{What the numbers show.} On a $5{,}000$-complaint test
+sample the system declines to auto-route about $70\%$ of complaints and is
+$89.6\%$ accurate on the $30\%$ it does route -- a quantitative
+confession that most consumer narratives are too ambiguous for any single
+auto-decision. Two negative findings surface immediately and we report
+them in the headline rather than burying them: only $6.1\%$ of attached
+regulation citations actually mention the rule the system claims, and one
+consumer category (debt-or-credit management) falls below the intended
+uncertainty guarantee.
+
+\smallskip
+\noindent\textbf{Implication.} A system like this should not silently
+auto-decide. It belongs behind a human-in-the-loop queue, with its
+uncertainty exposed up front and a stronger citation checker added before
+any production use. We release the code, scripts, and figures under MIT
+as a diagnostic instrument that shows where automation in
+consumer-protection routing actually breaks, so that future work can
+target the right failures instead of polishing the wrong ones.
 \end{abstract}
 
 \section{Introduction}\label{sec:intro}
@@ -140,13 +153,17 @@ attributed conduct.
 
 \subsection{Structural causal model}\label{sec:method-scm}
 
-The DAG over $V = \{ \textsc{Product}, \textsc{Issue}, \textsc{Conduct},
-\textsc{Harm}, \textsc{Severity}, \textsc{EvidenceGroundedness},
-\textsc{Route}, \textsc{ModelConfidence}\}$ is shown in
-Figure~\ref{fig:dag}. The five stated assumptions are:
+The DAG is over the variable set
+\begin{equation*}
+\begin{aligned}
+V = \{\;& \textsc{Product},\ \textsc{Issue},\ \textsc{Conduct},\ \textsc{Harm},\ \textsc{Severity},\\
+        & \textsc{EvidenceGroundedness},\ \textsc{Route},\ \textsc{ModelConfidence}\;\},
+\end{aligned}
+\end{equation*}
+shown in Figure~\ref{fig:dag}. The five stated assumptions are:
 \input{tables/dag_assumptions.tex}
 We estimate four interventional contrasts via stratified backdoor adjustment
-on $(\textsc{Product}, \textsc{Issue}, \textsc{Conduct})$ and report three
+on the triple of variables Product, Issue, and Conduct, and report three
 refutation tests in Table~\ref{tab:causal}: a synthetic random common
 cause, a within-stratum placebo permutation of the treatment, and a 70\%
 data-subset bootstrap.
@@ -217,11 +234,13 @@ sample of \texttt{test.parquet}.
 ($384$-dim) for both extraction and retrieval; cached locally for offline
 runs.
 
-\textbf{Baseline.} \texttt{TfidfVectorizer(ngram=(1,2),
-max\_features{=}50{,}000, min\_df{=}5)} +
-\texttt{LogisticRegression(C=1, max\_iter=1000, balanced)} +
-\texttt{CalibratedClassifierCV(method='sigmoid', cv=5)} on silver routes
-derived from our rule+SBERT extractor.
+\textbf{Baseline.} A bag-of-bigrams TF--IDF vectorizer
+($n$-gram range $(1,2)$, max features $50{,}000$, min document
+frequency $5$) feeds a multinomial logistic regression
+($C{=}1$, balanced class weights, max iterations $1{,}000$),
+post-hoc Platt-scaled with 5-fold sigmoid calibration. Training targets
+are silver routes from the rule$+$SBERT extractor; the baseline applies
+no causal scoring, conformal sets, or grounded citations.
 
 \textbf{Architecture diagram.} Figure~\ref{fig:arch}.
 
@@ -424,6 +443,7 @@ and retuning the conformal calibration set.
 \appendix
 \section{Schema}\label{app:schema}
 
+\begin{sloppypar}
 \paragraph{ConductTypes (11):} unauthorized, deceptive\_practice,
 unfair\_fee, debt\_collection\_abuse, credit\_report\_error,
 loan\_servicing\_error, discrimination, dark\_pattern, identity\_failure,
@@ -433,6 +453,7 @@ privacy\_violation, emotional\_distress, discrimination\_harm.\\
 \textbf{RouteTargets (6):} fraud\_ops, legal, supervisor, collections,
 servicing, route\_to\_other.\\
 \textbf{SeverityLevel:} 1 (LOW) -- 5 (CRITICAL).
+\end{sloppypar}
 
 \paragraph{Default conduct $\to$ route mapping
 $\pi(\cdot)$ (used by the validator when no route is supplied):}

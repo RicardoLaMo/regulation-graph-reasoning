@@ -26,7 +26,7 @@ def plot_manifold(coords: np.ndarray, node_types, products, out_path: Path, *,
     types = np.asarray(node_types)
     prods = np.asarray(products)
 
-    fig, ax = plt.subplots(figsize=(7.0, 5.5), dpi=150)
+    fig, ax = plt.subplots(figsize=(9.0, 5.5), dpi=150)
     uniq_prods = sorted(set(prods.tolist()))
     cmap = plt.get_cmap("tab20")
 
@@ -36,7 +36,7 @@ def plot_manifold(coords: np.ndarray, node_types, products, out_path: Path, *,
         c = cmap(k % 20)
         if m_complaint.any():
             ax.scatter(coords[m_complaint, 0], coords[m_complaint, 1],
-                       s=8, alpha=0.55, marker="o", color=c, label=p[:18])
+                       s=8, alpha=0.55, marker="o", color=c, label=p)
         if m_reg.any():
             ax.scatter(coords[m_reg, 0], coords[m_reg, 1],
                        s=70, alpha=0.95, marker="^",
@@ -48,7 +48,8 @@ def plot_manifold(coords: np.ndarray, node_types, products, out_path: Path, *,
     if silhouette is not None and not (isinstance(silhouette, float) and silhouette != silhouette):
         cap += f"\n(silhouette over Product = {silhouette:.3f})"
     ax.set_title(cap, fontsize=10)
-    ax.legend(fontsize=6, loc="best", ncol=2, frameon=True)
+    ax.legend(fontsize=7, loc="center left", bbox_to_anchor=(1.01, 0.5),
+              frameon=True, borderaxespad=0.0)
     fig.tight_layout()
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
