@@ -1,0 +1,186 @@
+@prefix ccg:    <https://github.com/RicardoLaMo/regulation-graph-reasoning/audit#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix prov:   <http://www.w3.org/ns/prov#> .
+@prefix rdfs:   <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sec:    <https://w3.org/2018/credentials/severity#> .
+@prefix xsd:    <http://www.w3.org/2001/XMLSchema#> .
+
+##############################################################################
+# CCG (Claude-Codex-Gemini) Review of PR #11
+# Subject: regulation-graph-reasoning, branch feat/regulation-graph-reasoning
+# Reviewers: Codex (gpt-5.5, code-aware) + Gemini (narrative/FAccT)
+##############################################################################
+
+ccg:Audit-2026-05-05
+    a prov:Activity ;
+    dcterms:title "CCG cross-model review of PR #11" ;
+    dcterms:created "2026-05-05"^^xsd:date ;
+    prov:wasAssociatedWith ccg:Reviewer-Codex , ccg:Reviewer-Gemini , ccg:Reviewer-Claude ;
+    ccg:targetPR "https://github.com/RicardoLaMo/regulation-graph-reasoning/pull/11" ;
+    ccg:targetBranch "feat/regulation-graph-reasoning" ;
+    ccg:agreedFinding ccg:F1-CausalTautology , ccg:F2-CitationFaithfulness ,
+                      ccg:F3-DisparateCoverage , ccg:F4-SCMConfounders ,
+                      ccg:F5-DeploymentRisk ;
+    ccg:codexUniqueFinding   ccg:F6-AbstentionMismatch ;
+    ccg:geminiUniqueFinding  ccg:F7-AdverseActionGap ;
+    ccg:secondaryFinding ccg:F8-ConformalOvercoverage , ccg:F9-HypergraphInert ,
+                         ccg:F10-StrawmanBaseline , ccg:F11-NonReproducible ,
+                         ccg:F12-StressUnderpowered .
+
+##############################################################################
+# Findings
+##############################################################################
+
+ccg:F1-CausalTautology a ccg:Finding ;
+    rdfs:label "E1/E4 do-interventions are tautological" ;
+    sec:severity "P0" ;
+    ccg:component "src/regreason/causal/" ;
+    ccg:evidence "scripts/06_run_causal_experiments.py:47,80; src/regreason/extract.py:129; src/regreason/ontology.py:117" ;
+    ccg:claim "ATE=1.000, CI=[1.000,1.000] in E1 because high_grounding=(n_complaint_spans>=1) and route is a deterministic function of conduct via CONDUCT_TO_ROUTE. E4 (esc=severity>=4) is identical by construction." ;
+    ccg:realWorldRef "Pearl (2009) selection bias; you cannot intervene on the same logic used to define the outcome." ;
+    ccg:fix ccg:Fix-DropTautologicalATE .
+
+ccg:F2-CitationFaithfulness a ccg:Finding ;
+    rdfs:label "Citation faithfulness 6.1% on clean inputs" ;
+    sec:severity "P0" ;
+    ccg:component "src/regreason/grounding.py:104" ;
+    ccg:evidence "doc/tables/headline.tex (cite_faithfulness=0.061); doc/tables/stress.tex adversarial 0.169" ;
+    ccg:claim "Headline grounding is effectively 93.9% unsupported. Stanford HAI 2024 Lexis+ AI hallucinated 17-33% of citations; this system is multiples worse." ;
+    ccg:realWorldRef "Stanford HAI 2024 'Hallucination-Free?' study; FActScore (Min et al. 2023) ChatGPT bio precision 58%; RAGAS (Es et al. 2023)." ;
+    ccg:fix ccg:Fix-RewriteGroundingClaim .
+
+ccg:F3-DisparateCoverage a ccg:Finding ;
+    rdfs:label "Per-product coverage gap on Debt or credit management" ;
+    sec:severity "P0" ;
+    ccg:component "Mondrian APS / per_group_coverage.tex" ;
+    ccg:evidence "doc/tables/per_group_coverage.tex: Debt or credit management = 0.778 vs target 0.90 (n=9 calibration support)" ;
+    ccg:claim "12-pt under-coverage on a vulnerable consumer category violates the Mondrian guarantee for that group." ;
+    ccg:realWorldRef "City National Bank $31M consent order (2023, redlining); regulators evaluate worst subgroup, not marginal." ;
+    ccg:fix ccg:Fix-AddFairnessSection .
+
+ccg:F4-SCMConfounders a ccg:Finding ;
+    rdfs:label "SCM unconfoundedness/positivity not credible" ;
+    sec:severity "P0" ;
+    ccg:component "src/regreason/causal/dag.py" ;
+    ccg:claim "Real CFPB routing depends on institution, state, channel, jurisdiction, portfolio, date — none included in the adjustment set (Product, Issue, Conduct)." ;
+    ccg:realWorldRef "Wells Fargo 2022 Consent Order: Texas-specific GAP refund failures, ~90,000 borrower accounts, $3.7B redress. Bank of America 2023: rewards differed by online vs phone application channel." ;
+    ccg:fix ccg:Fix-AddLimitations .
+
+ccg:F5-DeploymentRisk a ccg:Finding ;
+    rdfs:label "Deployment fail-mode is silent misrouting" ;
+    sec:severity "P0" ;
+    ccg:claim "99% coverage + 3.4% abstention + 6.1% faithful citations = quiet misrouting hidden by a wide conformal set. CFPB 60-day SLA can elapse before correction." ;
+    ccg:realWorldRef "Wells Fargo $3.7B / 16M accounts (2022); Bank of America $100M redress + $150M penalty (2023); CFPB Circular 2022-03 'specific reason' adverse-action requirement." ;
+    ccg:fix ccg:Fix-AddLimitations .
+
+ccg:F6-AbstentionMismatch a ccg:Finding ;
+    rdfs:label "Code does not implement the documented abstention rule" ;
+    sec:severity "P0" ;
+    ccg:component "src/regreason/calibrate.py:62-66" ;
+    ccg:evidence "Report and plan: 'abstain when |S|>=3 OR top1<theta'. Code: scripts/05_fit_calibration_conformal.py:94 calls should_abstain(top1) only; scripts/08_run_stress_tests.py:87 same." ;
+    ccg:claim "With mean set size 2.896 the |S|>=3 abstention rate is at least 37.9%, but the headline reports 3.4% — a material report/code integrity gap." ;
+    ccg:realWorldRef "MAPIE doc: marginal coverage, not correctness. Vovk (2005) coverage holds under exchangeability not under abstention rule changes." ;
+    ccg:fix ccg:Fix-PatchAbstention .
+
+ccg:F7-AdverseActionGap a ccg:Finding ;
+    rdfs:label "Conformal set size 3 cannot satisfy CFPB Circular 2022-03" ;
+    sec:severity "P1" ;
+    ccg:claim "Adverse-action notices require 'specific reasons'. A set of 3 plausible routes is too vague for ECOA-compliant denial reasons." ;
+    ccg:realWorldRef "CFPB Circular 2022-03 (Adverse Action Notification under ECOA / Reg B); CFPB 2024 RFI on AI in financial services." ;
+    ccg:fix ccg:Fix-AddLimitations .
+
+ccg:F8-ConformalOvercoverage a ccg:Finding ;
+    rdfs:label "0.99 marginal coverage at alpha=0.10 target (overcoverage)" ;
+    sec:severity "P1" ;
+    ccg:claim "APS guarantee is intact (Vovk-style cumulative score) but silver labels share the extractor's logic, so empirical coverage measures self-consistency, not correctness. Mean set size 2.896 over 6 classes ~= half-triage; not actionable on a 5-min SLA." ;
+    ccg:realWorldRef "Angelopoulos et al. (2021) on RAPS/APS overcoverage on ImageNet; CFPB 2023 annual report ~1.2M complaints handled." ;
+    ccg:fix ccg:Fix-AddLimitations .
+
+ccg:F9-HypergraphInert a ccg:Finding ;
+    rdfs:label "Default hypergraph encoder is non-learning; silhouettes ~ 0" ;
+    sec:severity "P2" ;
+    ccg:component "src/regreason/hypergraph_manifold/encoder.py:35" ;
+    ccg:evidence "manifold_meta.json: silhouette over conduct = -0.011; over product = 0.010" ;
+    ccg:realWorldRef "HGNN (Feng et al. 2019); HyperGCN (Yadati et al. 2019); HNHN (Dong et al. 2020) — all train and report classification deltas." ;
+    ccg:fix ccg:Fix-FrameAsBaseline .
+
+ccg:F10-StrawmanBaseline a ccg:Finding ;
+    rdfs:label "Baseline TF-IDF+LR ties macro-F1 with proposed (0.620 vs 0.620)" ;
+    sec:severity "P1" ;
+    ccg:component "src/regreason/baseline.py:8" ;
+    ccg:claim "Comments label baseline as 'deliberately weak'. Published CFPB classification work hits ~76.5% accuracy with deep models on 555,957 complaints." ;
+    ccg:realWorldRef "Bahassine et al. (2023) on CFPB DistilBERT; complaint-NLP literature." ;
+    ccg:fix ccg:Fix-AddLimitations .
+
+ccg:F11-NonReproducible a ccg:Finding ;
+    rdfs:label "Symlink-based data layout breaks off-machine reproduction" ;
+    sec:severity "P2" ;
+    ccg:component "data/README.md, scripts/01_bootstrap_data.py" ;
+    ccg:realWorldRef "Wilkinson et al. (2016) FAIR Data Principles; NeurIPS code-and-data submission policy." ;
+    ccg:fix ccg:Fix-AddDownloadScript .
+
+ccg:F12-StressUnderpowered a ccg:Finding ;
+    rdfs:label "n=80 per stress family is qualitative-probe scale" ;
+    sec:severity "P2" ;
+    ccg:realWorldRef "AdvGLUE (Wang et al. 2021); PromptBench (Zhu et al. NeurIPS 2024)." ;
+    ccg:fix ccg:Fix-AddLimitations .
+
+##############################################################################
+# Fixes (the remediation plan applied in this commit)
+##############################################################################
+
+ccg:Fix-PatchAbstention a ccg:Fix ;
+    rdfs:label "Implement |S|>=3 OR top1<theta in AbstentionPolicy.should_abstain" ;
+    ccg:targetFile "src/regreason/calibrate.py" ;
+    ccg:status "in-progress" ;
+    ccg:rerunArtifact "scripts/05_fit_calibration_conformal.py", "scripts/08_run_stress_tests.py", "scripts/09_render_figures.py" .
+
+ccg:Fix-DropTautologicalATE a ccg:Fix ;
+    rdfs:label "Re-label E1 and E4 as internal consistency checks; restrict causal claims to E3" ;
+    ccg:targetFile "doc/report.tex", "doc/tables/causal.tex" ;
+    ccg:status "in-progress" .
+
+ccg:Fix-RewriteGroundingClaim a ccg:Fix ;
+    rdfs:label "Rewrite abstract + Section 3.2 to lead with the 6.1% faithfulness finding" ;
+    ccg:targetFile "doc/report.tex" ;
+    ccg:status "in-progress" .
+
+ccg:Fix-AddFairnessSection a ccg:Fix ;
+    rdfs:label "Add §Fairness highlighting Debt 0.778 gap with bootstrap CIs" ;
+    ccg:targetFile "doc/report.tex" ;
+    ccg:status "in-progress" .
+
+ccg:Fix-AddLimitations a ccg:Fix ;
+    rdfs:label "Expand §Limitations to cover SCM confounders, deployment SLA risk, baseline ceiling, n=80 stress power" ;
+    ccg:targetFile "doc/report.tex" ;
+    ccg:status "in-progress" .
+
+ccg:Fix-AddDownloadScript a ccg:Fix ;
+    rdfs:label "Provide data/download_complaints.sh that pulls from public CFPB API" ;
+    ccg:targetFile "data/download_complaints.sh" ;
+    ccg:status "in-progress" .
+
+ccg:Fix-FrameAsBaseline a ccg:Fix ;
+    rdfs:label "Reframe hypergraph manifold as a viz-only diagnostic; silhouettes near zero are the result, not a bug" ;
+    ccg:targetFile "doc/report.tex" ;
+    ccg:status "in-progress" .
+
+##############################################################################
+# Validation plan
+##############################################################################
+
+ccg:PostValidation a ccg:Activity ;
+    rdfs:label "Post-fix validation" ;
+    ccg:step ccg:V1-RerunCalibration , ccg:V2-RerunStress , ccg:V3-RerenderTables ,
+             ccg:V4-RerenderFigures , ccg:V5-RebuildPDF , ccg:V6-RunTests .
+
+ccg:V1-RerunCalibration ccg:command "python scripts/05_fit_calibration_conformal.py" ;
+    ccg:expectedDelta "abstention_rate moves from 0.034 to >=0.379; coverage and per_group_coverage unchanged." .
+ccg:V2-RerunStress      ccg:command "python scripts/08_run_stress_tests.py" ;
+    ccg:expectedDelta "abstention rates rise on all stress families; clean baseline ratio recomputed." .
+ccg:V3-RerenderTables   ccg:command "python scripts/09_render_figures.py" .
+ccg:V4-RerenderFigures  ccg:command "regenerate setsize_hist.pdf etc." .
+ccg:V5-RebuildPDF       ccg:command "cd doc && latexmk -pdf -interaction=nonstopmode report.tex" ;
+    ccg:successCriterion "0 undefined references; PDF builds cleanly." .
+ccg:V6-RunTests         ccg:command "python -m pytest tests/ -q" ;
+    ccg:successCriterion "all 24 tests still green; new tests added for AbstentionPolicy(set_sizes) signature." .

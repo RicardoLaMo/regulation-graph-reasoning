@@ -89,9 +89,9 @@ def main():
         sub_y = np.array(df_test["silver_route"])[mask]
         per_group_cov[str(g)] = float(np.mean([y in s for s, y in zip(sub_sets, sub_y)]))
 
-    # Abstention
-    abs_pol = AbstentionPolicy(threshold=CFG.abstain_threshold)
-    abstain = abs_pol.should_abstain(p_test_t.max(axis=1))
+    # Abstention: |S| >= 3 OR top1 < theta (matches report & plan)
+    abs_pol = AbstentionPolicy(threshold=CFG.abstain_threshold, max_set_size=3)
+    abstain = abs_pol.should_abstain(p_test_t.max(axis=1), set_sizes=set_sizes)
     pred_idx = p_test_t.argmax(axis=1)
     pred = np.array([classes[i] for i in pred_idx])
     abst_rate = abstention_rate(abstain)

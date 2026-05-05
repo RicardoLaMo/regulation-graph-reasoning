@@ -60,7 +60,19 @@ class PlattScaler:
 
 @dataclass
 class AbstentionPolicy:
-    threshold: float = 0.5
+    """Abstain when top-1 calibrated prob < threshold OR conformal set is too wide.
 
-    def should_abstain(self, top1_prob: np.ndarray) -> np.ndarray:
-        return top1_prob < self.threshold
+    Two-pronged rule from the report and plan: abstention fires under either
+    low single-class confidence or high conformal hedging. Earlier revisions
+    only applied the threshold half of the rule, producing a headline
+    abstention rate inconsistent with the reported set-size distribution.
+    """
+    threshold: float = 0.5
+    max_set_size: int = 3
+
+    def should_abstain(self, top1_prob: np.ndarray,
+                       set_sizes: Optional[np.ndarray] = None) -> np.ndarray:
+        cond_top1 = top1_prob < self.threshold
+        if set_sizes is None:
+            return cond_top1
+        return cond_top1 | (np.asarray(set_sizes) >= self.max_set_size)

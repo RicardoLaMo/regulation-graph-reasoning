@@ -42,10 +42,16 @@ stratified sample of the CFPB recent-3-year split, we benchmark against a
 TF--IDF$+$Logistic-Regression baseline that lacks causal scoring,
 calibration, and grounded citations, and we stress-test the system with
 ambiguous, conflicting-evidence, and adversarial probes (prompt injection,
-hallucinated citations, paraphrase, negation flip). The proposed system
-maintains target-coverage conformal sets, exposes interpretable do-intervention
-deltas, and produces faithful regulation citations on a non-trivial share
-of stress inputs. We release all code, scripts, and figures under MIT.
+hallucinated citations, paraphrase, negation flip). \textbf{We frame the work
+as a diagnostic harness, not a production routing system.} Concretely, the
+expected-calibration error drops from $0.124$ to $0.051$ and Mondrian APS
+empirical coverage is $0.991$ (overcovered against the $0.90$ target);
+applying the documented two-pronged abstention rule (\(|S|\!\geq\!3\) or
+\(\hat p_{(1)}\!<\!\theta\)) the system abstains on $69.7\%$ of complaints
+and is $89.6\%$ accurate on the routed remainder. \emph{Citation faithfulness
+is only $6.1\%$ on clean inputs and $16.9\%$ on the adversarial subset}, a
+strong negative result that we expose explicitly rather than smooth over.
+We release all code, scripts, and figures under MIT.
 \end{abstract}
 
 \section{Introduction}\label{sec:intro}
@@ -273,10 +279,25 @@ escalation flag (a sanity check internal to the validator).
 
 \input{tables/causal.tex}
 
-A non-trivial absolute ATE in E1, with non-flipping signs under all three
-refutations, supports the SCM modeling choice that grounded retrieval
-contributes causally to routing accuracy beyond what is observable from
-text alone (conditional on the stated assumptions).
+\textbf{What is and is not a causal claim here.} E1 and E4 yield
+$\mathrm{ATE}=1.000$ with degenerate confidence intervals because the
+treatment and outcome share definitional logic: the silver route is a
+deterministic function of the primary conduct via the
+$\pi(\cdot)$ map (Appendix~\ref{app:schema}); \texttt{high\_grounding} is
+$\mathbb{1}[n_{\text{complaint\_spans}}\geq 1]$, which our extractor sets
+during the same pass; and the escalation flag is exactly
+$\mathbb{1}[\textsc{Severity}\geq 4]$. We therefore treat E1 and E4 as
+\emph{internal-consistency probes}: they verify that the refutation
+machinery does not spuriously flip a known-deterministic dependency, but
+they do not constitute causal evidence about real-world routing. Only
+\textbf{E3} (ATE $=0.290$, all three refutations within tolerance) admits a
+causal-flavoured reading, and only conditional on the assumptions in
+Section~\ref{sec:method-scm}. A genuinely identifying experiment would
+require human-labeled gold routes, randomized
+hide/restore of retrieved passages, and a Pearl front-door variable
+$M=$\,``retrieved-passage-cites-correct-obligation'' positioned between
+\textsc{EvidenceGroundedness} and \textsc{Route}; we leave this for future
+work.
 
 \section{Stress tests}\label{sec:stress}
 
@@ -303,24 +324,88 @@ and citation faithfulness across the three categories.}
 
 \section{Discussion and limitations}\label{sec:limits}
 
+\textbf{Citation faithfulness is the headline negative result.} On clean
+inputs only $6.1\%$ of generated citations contain the canonical conduct
+phrase claimed in the \texttt{AnswerObject}; on the adversarial subset the
+rate is $16.9\%$. By comparison, the Stanford HAI 2024 study of LexisNexis
+\textsc{Lexis+\,AI} and Westlaw \textsc{AI-Assisted Research} reports
+hallucination rates of $17$--$33\%$. Our pipeline retrieves passages but
+the retrieved passages frequently do not lexically support the claim. We
+treat this as a strong signal that a cross-encoder reranker (e.g.\
+\texttt{cross-encoder/ms-marco-MiniLM-L-12-v2}) is required before any
+production deployment, and we expose the metric prominently in the
+headline table rather than rolling it up.
+
+\textbf{Per-product coverage gap (fairness).} Mondrian APS guarantees
+marginal coverage per group only when each group has sufficient calibration
+mass. Table~\ref{tab:pgcov} shows the ``Debt or credit management'' group
+at $0.778$ against the $0.90$ target -- a $12$-point under-protection
+on a vulnerable consumer category. The cause is small calibration support
+for that product after stratified sampling; a finite-sample correction
+or product-specific oversampling is needed before deployment. This pattern
+echoes regulator-facing concerns (e.g.\ the City National Bank
+\$31\,M redlining consent order, 2023), which evaluate worst-subgroup
+behaviour rather than the marginal.
+
+\textbf{Two-pronged abstention.} The reject option fires when
+$|S|\!\geq\!3$ \emph{or} $\hat p_{(1)}\!<\!\theta$; with mean set size
+$\approx 2.9$ over six classes, this drives an abstention rate of
+$69.7\%$ on the clean test set. Accuracy on the routed remainder is
+$89.6\%$. The take-away is that the system honestly admits ``no
+single-route confidence'' on most CFPB narratives -- the conformal
+hedge is not actionable on a $5$-minute SLA, but it is honest. A
+production deployment would route abstentions to a human queue rather
+than auto-decide.
+
+\textbf{SCM confounders.} The backdoor adjustment over
+$(\textsc{Product}, \textsc{Issue}, \textsc{Conduct})$ omits institution,
+state, channel, jurisdiction, portfolio, and date. Real CFPB enforcement
+shows these matter: Wells Fargo's 2022 consent order ($\$3.7$\,B redress;
+$16$\,M accounts) included Texas-specific GAP-refund failures affecting
+$\sim$\,$90{,}000$ borrowers; Bank of America's $2023$ rewards issue
+varied by online vs.\ phone-application channel. Our ATEs should be read
+as conditional on these confounders being absent or randomly distributed,
+which they are not.
+
 \textbf{Silver labels.} The baseline and the calibration target are silver
 routes derived from our rule+SBERT extractor; this avoids label leakage
 across systems but limits the absolute interpretation of macro-F1. A small
-human-labeled face-validity sample is recommended for production use.
+human-labeled face-validity sample (we recommend $200$--$500$ rows) is
+required before any external claim about routing performance.
 
-\textbf{Frozen GAT.} The hypergraph encoder is initialized from SBERT and
-not fine-tuned. The manifold's silhouette over conduct primarily reflects
-the SBERT prior; one short contrastive epoch over
-$(\text{complaint}, \text{matching reg-section})$ positives is the
-recommended next step (gated by \texttt{cfg.train\_gat=True}).
+\textbf{Strawman baseline.} TF--IDF$+$LogReg ties macro-F1 with the
+proposed system at $0.620$ on silver labels. Published CFPB
+classification work reports $\sim 76.5\%$ accuracy with deep encoders on
+$555{,}957$ complaints; a DistilBERT or \texttt{intfloat/e5-small-v2}
+baseline would tighten the comparison.
+
+\textbf{Frozen hypergraph.} The default encoder is one mean-pool pass
+over capped clique expansion; silhouettes are $\approx 0$
+(conduct $-0.011$, product $0.010$). The hypergraph manifold should be
+read as a viz-only diagnostic, not a learned representation. Switching
+\texttt{cfg.train\_gat=True} runs a single contrastive epoch on
+$(\text{complaint},\text{matching reg-section})$ positives.
 
 \textbf{Single-jurisdiction corpus.} 51 sections cover the U.S.\ federal
 consumer-finance perimeter only; CRA/FHA, state UDAP statutes, and
 international regulators are out of scope.
 
-\textbf{Causal claims.} All ATEs are conditional on the assumptions in
-Section~\ref{sec:method-scm}; we frame the do-interventions as
-\emph{decision-support diagnostics}, not causal-discovery claims.
+\textbf{Stress-test power.} $n=80$ per family is qualitative-probe scale;
+$n\!\geq\!500$ is required for $p$-value-grade differentiation across
+families (cf.\ AdvGLUE, PromptBench).
+
+\textbf{Reproducibility.} The committed \texttt{data/download\_complaints.sh}
+pulls a $50{,}000$-row sample directly from the CFPB public Consumer
+Complaint Database API; users no longer need access to the original
+\texttt{cfpb/data/processed/recent3y/} parquet shards.
+
+\textbf{Deployment posture.} Given $6.1\%$ clean citation faithfulness, a
+$12$-point per-group coverage gap, and a $69.7\%$ abstention rate, this
+system should be deployed only as decision support behind a human-in-the-loop
+queue, with mandatory escalation for fraud, foreclosure, debt-collection,
+and discrimination claims, and with audit logging on every routed
+decision. The CFPB's 60-day response SLA makes silent misrouting the
+dominant operational risk to mitigate.
 
 \section{Conclusion}\label{sec:conclusion}
 

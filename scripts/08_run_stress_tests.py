@@ -67,7 +67,7 @@ def main():
     groups_cal = np.array(df_cal["product"].to_list(), dtype=object)
     conf = MondrianAPSConformal(alpha=CFG.alpha)
     conf.fit(p_cal_t, np.array(routes_cal), groups_cal, classes)
-    abs_pol = AbstentionPolicy(threshold=CFG.abstain_threshold)
+    abs_pol = AbstentionPolicy(threshold=CFG.abstain_threshold, max_set_size=3)
 
     examples = _build_examples(df_sample)
     summary = {}
@@ -84,7 +84,7 @@ def main():
         p_t = TemperatureScaler(T=T).transform(np.log(np.clip(p, eps, 1.0)))
         sets = conf.predict_set(p_t, groups)
         set_sizes = np.array([len(s) for s in sets])
-        abstain_mask = abs_pol.should_abstain(p_t.max(axis=1))
+        abstain_mask = abs_pol.should_abstain(p_t.max(axis=1), set_sizes=set_sizes)
 
         # Proposed: route + grounding + citation faithfulness
         cite_results = []

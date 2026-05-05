@@ -1,3 +1,7 @@
+# Codex/Gemini advisor session artifacts
+output/repo/
+.omc/
+
 __pycache__/
 *.py[cod]
 .pytest_cache/
